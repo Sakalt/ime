@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>架空英語IME</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 0;
+    }
+    #container {
+      width: 80%;
+      max-width: 800px;
+      margin-top: 20px;
+    }
+    textarea {
+      width: 100%;
+      height: 150px;
+      margin-bottom: 20px;
+      padding: 10px;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+    #keyboard {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 5px;
+    }
+    button {
+      padding: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .hidden {
+      display: none;
+    }
+    .suggestion {
+      margin: 5px 0;
+      padding: 5px;
+      cursor: pointer;
+    }
+    .suggestion:hover {
+      background-color: #ddd;
+    }
+    .copied {
+      background-color: #cfc;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <h1>架空英語IME</h1>
+    <textarea id="input" placeholder="ここに入力してください..."></textarea>
+    <div id="suggestions"></div>
+    <div id="keyboard">
+      <!-- 古英語や特殊文字を含む全てのキー -->
+      <button data-char="æ">æ</button> <!-- Ash -->
+      <button data-char="ƿ">ƿ</button> <!-- Wynn -->
+      <button data-char="ȝ">ȝ</button> <!-- Yogh -->
+      <button data-char="ɑ">ɑ</button> <!-- Macron付き母音 -->
+      <button data-char="ō">ō</button> <!-- Macron付き母音 -->
+      <button data-char="ē">ē</button> <!-- Macron付き母音 -->
+      <button data-char="ū">ū</button> <!-- Macron付き母音 -->
+      <button data-char="þ">þ</button> <!-- Thorn -->
+      <button data-char="ð">ð</button> <!-- Eth -->
+      <!-- 他の英語アルファベット -->
+      <button data-char="a">a</button>
+      <button data-char="b">b</button>
+      <button data-char="c">c</button>
+      <button data-char="d">d</button>
+      <button data-char="e">e</button>
+      <button data-char="f">f</button>
+      <button data-char="g">g</button>
+      <button data-char="h">h</button>
+      <button data-char="i">i</button>
+      <button data-char="j">j</button>
+      <button data-char="k">k</button>
+      <button data-char="l">l</button>
+      <button data-char="m">m</button>
+      <button data-char="n">n</button>
+      <button data-char="o">o</button>
+      <button data-char="p">p</button>
+      <button data-char="q">q</button>
+      <button data-char="r">r</button>
+      <button data-char="s">s</button>
+      <button data-char="t">t</button>
+      <button data-char="u">u</button>
+      <button data-char="v">v</button>
+      <button data-char="x">x</button>
+      <button data-char="y">y</button>
+      <button data-char="z">z</button>
+    </div>
+    <!-- 設定メニュー -->
+    <div id="settings" class="hidden">
+      <h2>設定</h2>
+      <label for="punctuations">句読点の設定 (カンマ、ピリオドなど):</label>
+      <input type="text" id="punctuations" placeholder="例: , . ; :">
+      <label for="pronunciationTitle">発音分類名:</label>
+      <input type="text" id="pronunciationTitle" placeholder="例: 発音">
+      <label for="explanation">辞書ページの説明:</label>
+      <textarea id="explanation" rows="3" placeholder="例: この辞書は架空の英語IMEです..."></textarea>
+      <label for="enableMarkdown">Markdownの有効/無効:</label>
+      <input type="checkbox" id="enableMarkdown">
+    </div>
+    <!-- 設定メニューのトグルボタン -->
+    <button id="settingsToggle">設定メニュー</button>
+  </div>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const input = document.getElementById('input');
+      const suggestions = document.getElementById('suggestions');
+      const keyboard = document.getElementById('keyboard');
+      let data = {}; // データを保存するための変数
+
+      // JSONデータを外部ファイルから読み込む
+      fetch('data.json')
+        .then(response => response.json())
+        .then(jsonData => {
+          data = jsonData;
+          setupSuggestions();
+        });
+
+      function setupSuggestions() {
+        // 入力に基づいて候補を表示する
+        input.addEventListener('input', () => {
+          const query = input.value.toLowerCase();
+          suggestions.innerHTML = '';
+
+          data.words.forEach(word => {
+            if (word.entry.form.toLowerCase().startsWith(query)) {
+              const suggestion = document.createElement('div');
+              suggestion.className = 'suggestion';
+              suggestion.textContent = word.entry.form;
+              suggestion.addEventListener('click', () => {
+                input.value = word.entry.form;
+                suggestions.innerHTML = '';
+              });
+              suggestions.appendChild(suggestion);
+            }
+          });
+        });
+
+        // エンターキーで選択肢を決定する
+        input.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            const firstSuggestion = suggestions.querySelector('.suggestion');
+            if (firstSuggestion) {
+              input.value = firstSuggestion.textContent;
+              suggestions.innerHTML = '';
+              event.preventDefault();
+            }
+          }
+        });
+
+        // スペースキーで選択肢を変更する
+        input.addEventListener('keydown', (event) => {
+          if (event.key === ' ') {
+            const currentText = input.value;
+            if (currentText) {
+              suggestions.innerHTML = '';
+              data.words.forEach(word => {
+                if (word.entry.form.toLowerCase().startsWith(currentText.toLowerCase())) {
+                  const suggestion = document.createElement('div');
+                  suggestion.className = 'suggestion';
+                  suggestion.textContent = word.entry.form;
+                  suggestion.addEventListener('click', () => {
+                    input.value = word.entry.form;
+                    suggestions.innerHTML = '';
+                  });
+                  suggestions.appendChild(suggestion);
+                }
+              });
+            }
+          }
+        });
+
+        // キーボードのボタンをクリックしたときに入力エリアに文字を追加
+        keyboard.addEventListener('click', (event) => {
+          if (event.target.tagName === 'BUTTON') {
+            input.value += event.target.getAttribute('data-char');
+          }
+        });
+      }
+
+      // 設定メニューのトグル機能
+      document.getElementById('settingsToggle').addEventListener('click', () => {
+        const settings = document.getElementById('settings');
+        settings.classList.toggle('hidden');
+      });
+
+      // コピー機能
+      document.getElementById('input').addEventListener('input', (event) => {
+        if (event.inputType === 'insertFromPaste') {
+          const pastedText = event.data || '';
+          const selection = window.getSelection();
+          const range = selection.getRangeAt(0);
+          const newNode = document.createTextNode(pastedText);
+          range.insertNode(newNode);
+          range.selectNode(newNode);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
